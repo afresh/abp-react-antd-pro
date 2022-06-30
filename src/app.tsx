@@ -1,15 +1,20 @@
 import Footer from '@/components/Footer';
 import RightContent from '@/components/RightContent';
+import { message } from 'antd';
 import { BookOutlined, LinkOutlined } from '@ant-design/icons';
 import type { Settings as LayoutSettings } from '@ant-design/pro-components';
 import { PageLoading, SettingDrawer } from '@ant-design/pro-components';
 import type { RunTimeLayoutConfig } from 'umi';
-import { history, Link } from 'umi';
+import { history, Link, RequestConfig } from 'umi';
 import defaultSettings from '../config/defaultSettings';
-import { currentUser as queryCurrentUser } from './services/ant-design-pro/api';
+import { getUser, signinRedirect, signinRedirectCallback, signinSilent, signinSilentCallback, signoutRedirectCallback } from './services/ant-design-pro/auth';
+import { myProfile as queryMyProfile } from './services/ant-design-pro/api';
 
 const isDev = process.env.NODE_ENV === 'development';
-const loginPath = '/user/login';
+const signinRedirectCallbackPath = '/signin-redirect-callback';
+const signinSilentCallbackPath = '/signin-silent-callback';
+const signoutRedirectCallbackPath = '/signout-redirect-callback';
+const consolePath = '/welcome';
 
 /** 获取用户信息比较慢的时候会展示一个 loading */
 export const initialStateConfig = {
@@ -19,35 +24,84 @@ export const initialStateConfig = {
 /**
  * @see  https://umijs.org/zh-CN/plugins/plugin-initial-state
  * */
-export async function getInitialState(): Promise<{
+ export async function getInitialState(): Promise<{
   settings?: Partial<LayoutSettings>;
-  currentUser?: API.CurrentUser;
+  currentUser?: API.Profile;
   loading?: boolean;
-  fetchUserInfo?: () => Promise<API.CurrentUser | undefined>;
+  fetchUserInfo?: () => Promise<API.Profile | undefined>;
 }> {
+  console.log('location', history.location.pathname);
+
   const fetchUserInfo = async () => {
     try {
-      const msg = await queryCurrentUser();
-      return msg.data;
+      let user;
+      if (history.location.pathname === signinRedirectCallbackPath) {
+        user = await signinRedirectCallback();
+      } else if (history.location.pathname === signinSilentCallbackPath) {
+        user = await signinSilentCallback();
+      } else {
+        user = await getUser();
+      }
+    
+      console.log('getUser', user);
+
+      const profile = await queryMyProfile();
+      return profile;
     } catch (error) {
-      history.push(loginPath);
+      signinRedirect();
     }
     return undefined;
   };
-  // 如果不是登录页面，执行
-  if (history.location.pathname !== loginPath) {
-    const currentUser = await fetchUserInfo();
+
+  if (history.location.pathname === signoutRedirectCallbackPath) {
+    await signoutRedirectCallback();
+  }
+
+  const currentUser = await fetchUserInfo();
+
+  if (currentUser) {
+    history.push(consolePath);
+
     return {
       fetchUserInfo,
       currentUser,
       settings: defaultSettings,
     };
   }
+
+  history.push('401');
   return {
     fetchUserInfo,
     settings: defaultSettings,
   };
 }
+
+export const request: RequestConfig = {
+  timeout: 2000,
+  responseInterceptors: [
+    async response => {
+      if (response.status === 200 || response.status === 204) {
+
+      } else if (response.status === 401) {
+        const user = await getUser();
+        if (user && user.refresh_token) {
+          await signinSilent();
+        } else {
+          history.push('401');
+          await signinRedirect();
+        }
+      } else {
+        let errorResponse = {} as API.ErrorResponse;
+        const json = await response.clone().json();
+        errorResponse = Object.assign(errorResponse, json);
+        console.log(response.url, errorResponse);
+        message.error(errorResponse.error.details ? errorResponse.error.details : errorResponse.error.message);
+      }
+
+      return response;
+    },
+  ],
+};
 
 // ProLayout 支持的api https://procomponents.ant.design/components/layout
 export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) => {
@@ -59,10 +113,10 @@ export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) =
     },
     footerRender: () => <Footer />,
     onPageChange: () => {
-      const { location } = history;
       // 如果没有登录，重定向到 login
-      if (!initialState?.currentUser && location.pathname !== loginPath) {
-        history.push(loginPath);
+      if (!initialState?.currentUser) {
+        history.push('401');
+        signinRedirect();
       }
     },
     links: isDev

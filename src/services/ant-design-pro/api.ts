@@ -1,40 +1,20 @@
 // @ts-ignore
 /* eslint-disable */
-import { request } from 'umi';
+import { request as umiRequest } from 'umi';
+import { RequestResponse, RequestOptionsWithResponse, RequestOptionsWithoutResponse, RequestOptionsInit } from 'umi-request';
+import { getUser } from './auth';
 
-/** 获取当前的用户 GET /api/currentUser */
-export async function currentUser(options?: { [key: string]: any }) {
-  return request<{
-    data: API.CurrentUser;
-  }>('/api/currentUser', {
+/** 获取当前的用户 GET /api/account/my-profile */
+export async function myProfile(options?: { [key: string]: any }) {
+  return abpRequest<API.Profile>('/api/account/my-profile', {
     method: 'GET',
-    ...(options || {}),
-  });
-}
-
-/** 退出登录接口 POST /api/login/outLogin */
-export async function outLogin(options?: { [key: string]: any }) {
-  return request<Record<string, any>>('/api/login/outLogin', {
-    method: 'POST',
-    ...(options || {}),
-  });
-}
-
-/** 登录接口 POST /api/login/account */
-export async function login(body: API.LoginParams, options?: { [key: string]: any }) {
-  return request<API.LoginResult>('/api/login/account', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    data: body,
     ...(options || {}),
   });
 }
 
 /** 此处后端没有提供注释 GET /api/notices */
 export async function getNotices(options?: { [key: string]: any }) {
-  return request<API.NoticeIconList>('/api/notices', {
+  return abpRequest<API.NoticeIconList>('/api/notices', {
     method: 'GET',
     ...(options || {}),
   });
@@ -45,13 +25,13 @@ export async function rule(
   params: {
     // query
     /** 当前的页码 */
-    current?: number;
+    currentPage?: number;
     /** 页面的容量 */
     pageSize?: number;
   },
   options?: { [key: string]: any },
 ) {
-  return request<API.RuleList>('/api/rule', {
+  return abpRequest<API.RuleList>('/api/identity/roles/table', {
     method: 'GET',
     params: {
       ...params,
@@ -62,7 +42,7 @@ export async function rule(
 
 /** 新建规则 PUT /api/rule */
 export async function updateRule(options?: { [key: string]: any }) {
-  return request<API.RuleListItem>('/api/rule', {
+  return abpRequest<API.RuleListItem>('/api/rule', {
     method: 'PUT',
     ...(options || {}),
   });
@@ -70,7 +50,7 @@ export async function updateRule(options?: { [key: string]: any }) {
 
 /** 新建规则 POST /api/rule */
 export async function addRule(options?: { [key: string]: any }) {
-  return request<API.RuleListItem>('/api/rule', {
+  return abpRequest<API.RuleListItem>('/api/rule', {
     method: 'POST',
     ...(options || {}),
   });
@@ -78,8 +58,32 @@ export async function addRule(options?: { [key: string]: any }) {
 
 /** 删除规则 DELETE /api/rule */
 export async function removeRule(options?: { [key: string]: any }) {
-  return request<Record<string, any>>('/api/rule', {
+  return abpRequest<Record<string, any>>('/api/rule', {
     method: 'DELETE',
     ...(options || {}),
   });
 }
+
+interface RequestMethodInUmi<R = false> {
+  <T = any>(
+    url: string,
+    options: RequestOptionsWithResponse & { skipErrorHandler?: boolean },
+  ): Promise<RequestResponse<T>>;
+  <T = any>(
+    url: string,
+    options: RequestOptionsWithoutResponse & { skipErrorHandler?: boolean },
+  ): Promise<T>;
+  <T = any>(
+    url: string,
+    options?: RequestOptionsInit & { skipErrorHandler?: boolean },
+  ): R extends true ? Promise<RequestResponse<T>> : Promise<T>;
+}
+
+const abpRequest: RequestMethodInUmi = async <T> (url: any, options: any) => {
+  const user = await getUser();
+
+  return umiRequest<T>(url, {
+    headers: user && user.access_token ? { 'Authorization': `Bearer ${user.access_token}` } : {},
+    ...(options || {}),
+  });
+};

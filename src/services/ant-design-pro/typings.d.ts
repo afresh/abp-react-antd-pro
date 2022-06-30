@@ -2,25 +2,28 @@
 /* eslint-disable */
 
 declare namespace API {
-  type CurrentUser = {
-    name?: string;
-    avatar?: string;
-    userid?: string;
+  type IdentityUserExtraProperties = {
+    Avatar?: string;
+    Birthday?: string;
+    IDCardNumber?: string;
+    IDCardNumberConfirmed?: boolean;
+    IdentityType?: number;
+    JobNumber?: string;
+    MemberPoint?: number;
+    OuterId?: string;
+    Sex?: number;
+    StudentNumber?: string;
+  }
+
+  type Profile = {
+    userName?: string;
     email?: string;
-    signature?: string;
-    title?: string;
-    group?: string;
-    tags?: { key?: string; label?: string }[];
-    notifyCount?: number;
-    unreadCount?: number;
-    country?: string;
-    access?: string;
-    geographic?: {
-      province?: { label?: string; key?: string };
-      city?: { label?: string; key?: string };
-    };
-    address?: string;
-    phone?: string;
+    name?: string;
+    surname?: string;
+    phoneNumber?: string;
+    isExternal?: boolean;
+    hasPassword?: boolean;
+    extraProperties?: IdentityUserExtraProperties;
   };
 
   type LoginResult = {
@@ -69,12 +72,14 @@ declare namespace API {
   };
 
   type ErrorResponse = {
-    /** 业务约定的错误码 */
-    errorCode: string;
-    /** 业务上的错误信息 */
-    errorMessage?: string;
-    /** 业务上的请求是否成功 */
-    success?: boolean;
+    error: Error;
+  };
+
+  type Error = {
+    code?: string;
+    data?: any;
+    details?: string;
+    message?: string;
   };
 
   type NoticeIconList = {
