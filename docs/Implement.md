@@ -258,13 +258,6 @@ Overrite `onPageChange`.
 
 Replace `outLogin` with `signoutRedirect`.
 
-```typescript
-const signinRedirectCallbackPath = '/signin-redirect-callback';
-const signinSilentCallbackPath = '/signin-silent-callback';
-const signoutRedirectCallbackPath = '/signout-redirect-callback';
-const consolePath = '/welcome';
-```
-
 ### 6. Run
 
 ```shell
