@@ -45,6 +45,6 @@ yarn build
 
 ## Docs
 
-[OIDC Settings](./docs/OidcSettings.md)
-[ABP Settings](./docs/AbpSettings.md)
-[Implement](./docs/Implement.md)
+* [OIDC Settings](./docs/OidcSettings.md)
+* [ABP Settings](./docs/AbpSettings.md)
+* [Implement](./docs/Implement.md)
